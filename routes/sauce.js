@@ -14,8 +14,6 @@ router.post('/:id/like', auth, sauceCtrl.likeOneSauce);
 
 
 
-//router.patch('/', upload, saveOneSauceImage);
-//router.patch('/:id', upload, updateOneSauceImage);
 
 
 module.exports = router;

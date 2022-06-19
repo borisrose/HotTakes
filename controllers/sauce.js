@@ -1,5 +1,22 @@
+const { json } = require('express');
 const Sauce = require('../models/Sauce');
 
+
+
+exports.getOneSauce = (req, res, next) => {
+    
+    
+    Sauce.findOne({_id: req.params.id})
+      .then( sauce => {
+
+        console.log(sauce)
+        res.status(200).json(sauce)
+      }
+        )
+      .catch(error => res.status(404).json({message : error}))
+
+
+}
 
 
 exports.getAllSauces = (req, res, next) => {
@@ -28,99 +45,214 @@ exports.getAllSauces = (req, res, next) => {
 
 
 
-
-exports.getOneSauce = (req, res, next) => {
-
-  Sauce.findById(req.params.id).then(
-    (oneSauce) => {
-
-      if (!oneSauce) {
-        return res.status(404).send(new Error('Sauce not found!'));
-      }
-      
-      res.status(200).json(oneSauce);
-    }
-  ).catch(
-    () => {
-      res.status(500).send(new Error('Database error!'));
-    }
-  )
-};
-
-
 exports.saveOneSauce = (req, res, next) => {
-
-    if (!req.body.sauce || !req.body.image) {
+ 
+   
+    if (!req.body.sauce || !req.file) {
         return res.status(400).send(new Error('Bad request!'));
     }
 
-    delete req.body._id;
+    const sauceObject = JSON.parse(req.body.sauce);
     
+  
     const sauce = new Sauce({
-      ...req.body
+      ...sauceObject,
+      imageUrl: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
     });
-
-    sauve.save()
+    sauce.save()
       .then(() => res.status(201).json({ message: 'Sauce enregistrée !'}))
-      .catch(error => res.status(400).json({ error }));
+      .catch(error => {
+
+        console.log(error)
+        res.status(400).json({ message : error })
+      });
   
 
 
 };
 
 
-exports.updateOneSauce = async (req, res, next) => {
-    const id = req.params.userId;
+exports.updateOneSauce = (req, res, next) => {
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(404).send(`No Sauce Image with id: ${userId}`);
+  if(!req.body) {
+    return res.status(400).send(new Error('Bad Request'))
+  }
 
-    const path = req.file.path.replace(/\\/g, "/");
+  if(req.file){
+    const sauceObject = JSON.parse(req.body.sauce);
+    const sauce = new Sauce({
+      ...sauceObject,
+      imageUrl: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
+      _id:req.params.id
+    });
 
-    await User.findByIdAndUpdate(id, req.body = {ProfilePicture: "http://localhost:5000/" + path}, { new: true });
-    res.json(updateAnUser);
+    Sauce.updateOne({_id: req.params.id}, sauce)
+      .then(()=> res.status(200).json({ message : 'Object modifié'}))
+      .catch(error => res.status(400)/json({error}))
+
+  }else{
+
+    Sauce.updateOne({_id: req.params.id}, {...req.body, _id:req.params.id})
+    .then(()=> res.status(200).json({ message : 'Objet modifié'}))
+    .catch(error => res.status(400)/json({error}))
+
+  }
 }
 
-//router.delete('/:id', auth, sauceCtrl.deleteOneSauce);
-//router.post('/:id/like', auth, sauceCtrl.likeOneSauce);
+exports.deleteOneSauce = (req, res, next) => {
 
+    Sauce.findOne({_id:req.params.id})
+      .then(
 
-exports.deleteOneSauce =  (req,res,next) => {
-
-        Sauce.findOne({_id:req.params.id}).then(
           (sauce) => {
-              if(!sauce) {
-                return res.status(404).json({
-                  error: new Error('Objet non trouvé !')
+
+            if(!sauce) {
+
+              res.status(404).json({
+                error : new Error('Aucune sauce')
+              });
+            }
+
+            if(sauce.userId !== req.auth.userId){
+
+              res.status(400).json({
+                error: new Error('Unauthorized request')
+              });
+            }
+            Sauce.deleteOne({_id: req.params.id}).then(
+
+              ()=> {
+                res.status(200).json({
+
+                  message: 'Deleted'
+                
                 });
+
               }
-              if(sauce.userId !== req.auth.userId){
-                return res.status(401).json({
-                  error: new Error('Requête non autorisée!')
-                });
-              }
-              Sauce.deleteOne({_id:res.params.id})
-              .then(
-                  ()=> res.status(200).json({message:'Deleted !'})
-              )
-              .catch(
-                  error=> res.status(400).json({error})
-              )
+
+            ).catch(
+
+                (error) => {
+                  res.status(400).json({
+                    error: error
+                  });
+                }
+
+
+            );
+
 
           }
+
+
+      )
+
+
+};
+
+
+
+
+
+
+exports.likeOneSauce = (req,res, next) => {
+
+    if(!req.body || !req.body.userId  || !req.body.like){
+      return res.status(400).send(new Error('Bad request!'));
+    }
+
+    Sauce.findOne({_id:req.params.id})
+      .then(
+
+          (s) => {
+
+              console.log(s);
+
+              if(!s) {
+
+                res.status(404).json({
+                  error : new Error('Aucune sauce')
+                });
+              }
+
+              if(s.userId !== req.auth.userId){
+
+                res.status(400).json({
+                  error: new Error('Unauthorized request')
+                });
+              }
+
+              const sauceObject = JSON.parse(s)
+              console.log('Sauce Object : ', sauceObject);
+              
+              let sauce = new Sauce({...sauceObject});
+              const isUserInLikesArray = (sauce.usersLiked.filter(user => user = req.body.userId)).length === 1 ? true : false; 
+              const isUserInDislikesArray = (sauce.userdisLiked.filter(user => user = req.body.userId)).length === 1 ? true : false; 
+              if(isUserInLikesArray && !isUserInDislikesArray){
+                  // means that the user likes the item and does not dislike it
+                  if(req.body.like === 1){
+                    return 
+                  }
+                  else if(req.body.like === 0){
+
+                    sauce.likes -=1;
+                    sauce.usersLiked = sauce.usersLiked.filter(user => user != req.body.userId)
+                    
+                  }
+                  else if(req.body.like === -1){
+
+                    sauce.dislikes = 1;
+                    sauce.likes -= 1;
+                    sauce.usersLiked = sauce.usersLiked.filter(user => user != req.body.userId)
+                    sauce.usersDisliked.push(req.body.userId);
+                  }
+                  Sauce.updateOne({_id: req.params.id}, sauce)
+                  
+
+            
+
+              }else if(!isUserInLikesArray && isUserInDislikesArray){
+                  // means the user does not like the item and dislike it
           
-        )
-       
+                if(req.body.like === 1){
+                  sauce.likes += 1
+                  sauce.dislikes -= 1;
+                  sauce.usersDisliked = sauce.usersDisLiked.filter(user => user != req.body.userId)
+                  sauce.usersLiked.push( req.body.userId)
+                }
+                else if(req.body.like === 0){
+                  sauce.dislikes -=1;
+                  sauce.usersDisliked = sauce.usersDisliked.filter(user => user != req.body.userId)
+                  console.log(sauce);
+                }
+                else if(req.body.like === -1){
+
+                  return;
+
+                }
+                Sauce.updateOne({_id: req.params.id}, sauce)
+
+            } else if(!isUserInLikesArray && !isUserInDislikesArray) {
+
+              if(req.body.like === 1){
+                sauce.likes += 1;
+                sauce.usersLiked.push( req.body.userId);
+              }
+              else if(req.body.like === 0){
+                return;
+              }
+              else if(req.body.like === -1){
+
+                sauce.dislikes = 1;
+                sauce.usersDisliked.push(req.body.userId);
+
+              }
+              
+              Sauce.updateOne({_id: req.params.id}, sauce)
+
+            }
+        }
+      )
+
 }
 
-exports.likeOneSauce = (req,res,next) => {
-
-        Product.updateOne({_id:req.params.id}, {...req.body, _id:req.params.id})
-            .then( 
-                product => res.status(200).json({message: 'Modified !'})
-            )
-            .catch(
-                error => res.status(400).json(
-                    {error}
-                )
-            )
-}

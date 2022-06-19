@@ -11,6 +11,7 @@ dotenv.config();
 
 
 app.use(express.json())
+app.use(express.urlencoded())
 //au-dessus on s'assure que le CRUD sera en format json
 app.use('/uploads', express.static('uploads'));
 

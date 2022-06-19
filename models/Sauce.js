@@ -8,9 +8,9 @@ const sauceSchema = mongoose.Schema(
         
         name:{type:String, required:true},
 
-        manufacturer:{type:Number, required:true},
+        manufacturer:{type:String, required:true},
 
-        description:{type:Boolean, required:true},
+        description:{type:String, required:true},
 
         mainPepper : {type: String, required: true},
 
@@ -18,13 +18,13 @@ const sauceSchema = mongoose.Schema(
 
         heat: {type: Number, required: true},
 
-        likes : {type: Number, required: true},
+        likes : {type: Number, default: 0, required: true},
 
-        dislikes : {type: Number, required: true},
+        dislikes : {type: Number, default: 0, required: true},
 
-        usersLikes: {type: Array, required: true},
+        usersLiked: {type: Array, required: true},
 
-        usersDislikes: {type: Array, required: true}
+        usersDisliked: {type: Array, required: true}
     }
     // l'argument de la méthode Schema est donc un objet
 );

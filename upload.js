@@ -21,4 +21,4 @@ const fileFilter = (req, file, cb) => {
 
 let upload = multer({ storage: storage, fileFilter: fileFilter,});
 
-module.exports =  upload.single('SaucePicture')
+module.exports =  upload.single('image') //array possible
